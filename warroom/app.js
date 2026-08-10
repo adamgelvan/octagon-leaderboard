@@ -211,11 +211,32 @@ async function fetchSales(){
     .filter(s=>s.agent && isFinite(s.premium) && s.premium>0 && parseMDY(s.date)>0);
 }
 
+/* ---------- TIME MACHINE ----------
+   ?week=8/3  (or 8/3/2026, or 2026-08-03) pins the board to that week.
+   ← / → step weeks · Home or ?week= cleared returns to live. */
+const MONDAY = (ts)=>{ const d=new Date(ts); return ts - ((d.getDay()+6)%7)*86400000; };
+function parseWeekParam(v){
+  if (!v) return 0;
+  let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);            // 2026-08-03
+  if (m) return MONDAY(new Date(+m[1],+m[2]-1,+m[3]).getTime());
+  m = v.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/);         // 8/3 or 8/3/2026
+  if (m) return MONDAY(new Date(m[3]? +m[3] : new Date().getFullYear(), +m[1]-1, +m[2]).getTime());
+  return 0;
+}
+let timeMachine = parseWeekParam(new URLSearchParams(location.search).get("week"));
+function setWeek(ts){                     // ts=0 → back to live
+  timeMachine = ts;
+  const u = new URL(location.href);
+  if (ts){ const d=new Date(ts); u.searchParams.set("week", (d.getMonth()+1)+"/"+d.getDate()+"/"+d.getFullYear()); }
+  else u.searchParams.delete("week");
+  history.replaceState(null,"",u);
+  poll();
+}
+
 const DAY_NAMES = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 function computeWeek(sales){
   const latestTs = sales.reduce((a,s)=>Math.max(a,parseMDY(s.date)), 0);
-  const d0=new Date(latestTs); const dow=(d0.getDay()+6)%7;      // Mon=0…Sun=6
-  const weekStart = latestTs - dow*86400000;
+  const weekStart = timeMachine || MONDAY(latestTs);
   const days = Array.from({length:7},(_,i)=>{
     const d=new Date(weekStart+i*86400000);
     return { name:DAY_NAMES[i], label:(d.getMonth()+1)+"/"+d.getDate(), ts:weekStart+i*86400000 };
@@ -305,6 +326,12 @@ function render(w){
     `<div class="amt">${w.team.weekCount? money2(w.team.weekTotal/w.team.weekCount):"—"}</div><div class="ct">AVG / DEAL</div>`));
 
   $("#weekTag").textContent = `WEEK OF ${w.days[0].label}`;
+  // time machine banner
+  const tm=$("#tmBanner");
+  if (timeMachine){
+    tm.innerHTML = `🕰️ TIME MACHINE · WEEK OF ${w.days[0].label} <span>← → CHANGE WEEK · HOME = LIVE</span>`;
+    tm.classList.remove("hidden");
+  } else tm.classList.add("hidden");
 }
 function wrapRow(cell,cls){ cell.classList.add(cls); return cell; }
 
@@ -376,6 +403,7 @@ function pumpMemes(){
    ============================================================ */
 let seen=null;   // Map key -> count
 let tiers=null;  // Map "agent|dayIdx" -> tier level, for bonus-crossing detection
+let lastLatestTs=Date.now();  // newest deal date seen, anchors the "live" week
 const keyOf=(s)=>`${s.date}|${s.agent}|${s.premium}`;
 async function poll(){
   try{
@@ -383,6 +411,7 @@ async function poll(){
     const w = computeWeek(sales);
     render(w);
     const latestTs = sales.reduce((a,s)=>Math.max(a,parseMDY(s.date)), 0);
+    lastLatestTs = latestTs;
     updateTicker(sales.filter(s=>parseMDY(s.date)===latestTs).reverse(), w);  // newest first
     const counts=new Map();
     for (const s of sales) counts.set(keyOf(s), (counts.get(keyOf(s))||0)+1);
@@ -403,13 +432,13 @@ async function poll(){
     // daily tier crossings ($800/$1400/$2200) → bonus animation
     const newTiers=new Map();
     for (const a of w.agents) a.perDay.forEach((d,i)=>newTiers.set(a.agent+"|"+i, tierLevel(d.sum)));
-    if (tiers){
+    if (tiers && !timeMachine){          // never celebrate a past week's numbers
       for (const [k,lvl] of newTiers){
         if (lvl > (tiers.get(k)||0))
           queueBonus(k.split("|")[0], tierBonus(lvl), "DAILY BONUS UNLOCKED");
       }
     }
-    tiers=newTiers;
+    tiers = timeMachine ? null : newTiers;   // rebuild baseline on return to live
     const pill=$("#statusPill");
     pill.textContent=`● live · ${sales.length} deals on the books · ${new Date().toLocaleTimeString()}`;
     pill.className="status-pill ok";
@@ -450,5 +479,12 @@ document.addEventListener("keydown",(e)=>{
     case "m": { const m=Sound.toggleMute(); $("#statusPill").textContent = m?"🔇 muted":"🔊 sound on"; } break;
     case "f": document.fullscreenElement? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); break;
     case "r": poll(); break;
+    // ---- time machine ----
+    case "arrowleft":  setWeek((timeMachine || MONDAY(lastLatestTs)) - 7*86400000); break;
+    case "arrowright": {
+      const next=(timeMachine || MONDAY(lastLatestTs)) + 7*86400000;
+      setWeek(next > MONDAY(lastLatestTs) ? 0 : next);   // past the live week → back to live
+    } break;
+    case "home": case "escape": setWeek(0); break;
   }
 });

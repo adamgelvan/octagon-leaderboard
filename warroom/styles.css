@@ -78,6 +78,13 @@ body{font-family:'Oswald',"Arial Narrow",sans-serif;color:var(--ink);-webkit-fon
 .live-dot{width:13px;height:13px;border-radius:50%;background:var(--blood-2);animation:livePulse 1.4s infinite}
 .clock{color:var(--gold);font-variant-numeric:tabular-nums;margin-left:6px}
 
+/* ---------- time machine banner ---------- */
+.tm-banner{position:relative;z-index:3;display:flex;align-items:center;justify-content:center;gap:22px;
+  padding:7px 24px;font-family:'Anton',Impact,sans-serif;font-size:clamp(15px,1.5vw,26px);letter-spacing:.1em;
+  color:#fff;background:linear-gradient(90deg,rgba(138,43,226,.35),rgba(138,43,226,.75),rgba(138,43,226,.35));
+  border-bottom:2px solid #b06cff;box-shadow:0 0 30px rgba(138,43,226,.5)}
+.tm-banner span{font-family:'Bebas Neue',sans-serif;font-size:.62em;letter-spacing:.22em;color:#e3ccff}
+
 #stage{position:relative;z-index:2;padding:14px 24px 8px;min-height:0;display:flex}
 /* ---------- newswire ticker (today's deals on rotation) ---------- */
 #ticker{position:relative;z-index:2;height:48px;overflow:hidden;border-top:2px solid rgba(255,210,63,.25);
