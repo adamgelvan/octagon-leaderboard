@@ -1,0 +1,73 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THE OCTAGON — Sales Championship</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+<!-- bump ?v= when styles.css/app.js change so TVs never run stale code -->
+<link rel="stylesheet" href="styles.css?v=2" />
+
+<!-- ============ SPLASH / AUDIO UNLOCK ============ -->
+<div id="splash">
+  <div class="splash-inner">
+    <div class="splash-belt">🏆</div>
+    <h1 class="splash-title">THE&nbsp;OCTAGON</h1>
+    <div class="splash-sub">SALES CHAMPIONSHIP · LIVE LEADERBOARD</div>
+    <button id="enterBtn">🥊 ENTER THE OCTAGON</button>
+    <div class="splash-hint">Click to start fight night · enables sound &amp; fullscreen</div>
+  </div>
+  <canvas id="splashFx"></canvas>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" class="hidden">
+  <canvas id="bgFx"></canvas>
+
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-glove">🥊</span>
+      <span class="brand-name">THE OCTAGON</span>
+      <span class="brand-tag">SALES CHAMPIONSHIP</span>
+    </div>
+    <div class="live">
+      <span class="live-dot"></span> LIVE
+      <span id="clock" class="clock"></span>
+    </div>
+  </header>
+
+  <main id="stage">
+    <!-- Scenes get injected here -->
+    <div id="scene" class="scene"></div>
+  </main>
+
+  <footer id="ticker">
+    <div id="tickerTrack" class="ticker-track"></div>
+  </footer>
+
+  <!-- Scene rotation indicator -->
+  <div id="dots" class="scene-dots"></div>
+
+  <!-- Overlay layer for KO / rockets / memes -->
+  <div id="overlay" class="overlay-layer"></div>
+  <canvas id="fxCanvas"></canvas>
+
+  <!-- Help panel -->
+  <div id="help" class="help hidden">
+    <h3>🎮 CONTROLS</h3>
+    <ul>
+      <li><b>S</b> — Simulate a sale 🚀</li>
+      <li><b>K</b> — Simulate a knockout 🥊</li>
+      <li><b>D</b> — Toggle auto demo mode</li>
+      <li><b>R</b> — Refresh data now</li>
+      <li><b>N</b> — Next dashboard</li>
+      <li><b>F</b> — Fullscreen</li>
+      <li><b>M</b> — Mute / unmute</li>
+      <li><b>H</b> or <b>?</b> — This help</li>
+    </ul>
+    <div class="help-foot">Press any key to close</div>
+  </div>
+
+  <div id="statusPill" class="status-pill">connecting…</div>
+</div>
+
+<script src="app.js?v=4"></script>

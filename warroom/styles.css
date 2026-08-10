@@ -1,0 +1,217 @@
+/* ============================================================
+   THE WAR ROOM — weekly fight stats grid (UFC theme)
+   Companion board to THE OCTAGON champions leaderboard.
+   ============================================================ */
+
+:root{
+  --blood:#e10600;
+  --blood-2:#ff2b1c;
+  --gold:#ffd23f;
+  --gold-2:#ffb800;
+  --black:#05050a;
+  --carbon:#111119;
+  --carbon-2:#191924;
+  --steel:#2a2a3a;
+  --neon-green:#39ff14;
+  --neon:#00e5ff;
+  --ink:#eef0ff;
+  --muted:#9aa0b8;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--black);overflow:hidden}
+body{font-family:'Oswald',"Arial Narrow",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;user-select:none}
+.hidden{display:none !important}
+
+/* ---------- splash ---------- */
+#splash{position:fixed;inset:0;z-index:100;display:grid;place-items:center;
+  background:radial-gradient(ellipse at center,#1a1020 0%,#05050a 70%)}
+.splash-inner{text-align:center;animation:fadeUp .8s ease both}
+.splash-icon{font-size:96px;filter:drop-shadow(0 0 26px var(--gold));animation:bob 3s ease-in-out infinite}
+.splash-title{font-family:'Anton',Impact,sans-serif;font-size:clamp(56px,11vw,160px);line-height:.9;text-transform:uppercase;
+  background:linear-gradient(180deg,#fff 0%,var(--gold) 55%,var(--blood) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.splash-sub{font-family:'Bebas Neue',sans-serif;font-size:clamp(15px,2.2vw,30px);color:var(--gold);
+  letter-spacing:.5em;margin:6px 0 32px;text-indent:.5em}
+#enterBtn{font-family:'Anton',Impact,sans-serif;font-size:clamp(20px,2.6vw,36px);text-transform:uppercase;
+  letter-spacing:.05em;color:#fff;padding:20px 48px;border:none;border-radius:14px;cursor:pointer;
+  background:linear-gradient(180deg,var(--blood-2),var(--blood));
+  box-shadow:0 0 0 4px rgba(0,0,0,.4),0 14px 40px rgba(225,6,0,.6),inset 0 2px 0 rgba(255,255,255,.3);
+  transition:transform .12s ease}
+#enterBtn:hover{transform:scale(1.05)}
+.splash-hint{margin-top:18px;color:var(--muted);font-size:14px;letter-spacing:.15em;text-transform:uppercase}
+
+/* ---------- app frame ---------- */
+#app{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr auto auto;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -10%, rgba(225,6,0,.16), transparent 60%),
+    radial-gradient(ellipse 100% 60% at 50% 110%, rgba(0,229,255,.08), transparent 60%),
+    linear-gradient(180deg,#0a0a12,#05050a)}
+/* octagon cage backdrop */
+#app::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.08;
+  background-image:
+    linear-gradient(60deg,transparent 48%,#fff 49%,#fff 51%,transparent 52%),
+    linear-gradient(-60deg,transparent 48%,#fff 49%,#fff 51%,transparent 52%);
+  background-size:46px 80px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 45%,#000 40%,transparent 80%)}
+/* spotlight sweep */
+#app::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:conic-gradient(from 0deg at 50% -10%, transparent 0deg, rgba(255,255,255,.04) 20deg, transparent 40deg);
+  animation:sweep 16s linear infinite;mix-blend-mode:screen}
+
+/* ---------- ambient FX: embers canvas + flying emojis ---------- */
+#bgFx{position:absolute;inset:0;width:100%;height:100%;z-index:0;opacity:.55;pointer-events:none}
+#emojiFx{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+#emojiFx .fly{position:absolute;top:0;left:0;will-change:transform,opacity;opacity:0;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.55))}
+
+#topbar{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 28px;border-bottom:2px solid rgba(255,210,63,.25);
+  background:linear-gradient(180deg,rgba(0,0,0,.55),transparent)}
+.brand{display:flex;align-items:center;gap:16px}
+.brand-glove{font-size:34px;animation:punch 2.4s ease-in-out infinite}
+.brand-name{font-family:'Anton',Impact,sans-serif;font-size:32px;text-transform:uppercase;
+  background:linear-gradient(180deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-tag{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.35em;color:var(--blood-2);
+  border-left:2px solid var(--steel);padding-left:16px}
+.live{display:flex;align-items:center;gap:12px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.2em}
+.live-dot{width:13px;height:13px;border-radius:50%;background:var(--blood-2);animation:livePulse 1.4s infinite}
+.clock{color:var(--gold);font-variant-numeric:tabular-nums;margin-left:6px}
+
+#stage{position:relative;z-index:2;padding:14px 24px 8px;min-height:0;display:flex}
+/* ---------- newswire ticker (today's deals on rotation) ---------- */
+#ticker{position:relative;z-index:2;height:48px;overflow:hidden;border-top:2px solid rgba(255,210,63,.25);
+  background:linear-gradient(0deg,rgba(0,0,0,.65),transparent);display:flex;align-items:center}
+#ticker::before{content:"⚡ NEWSWIRE";position:absolute;left:0;top:0;bottom:0;z-index:2;display:flex;align-items:center;
+  padding:0 20px;font-family:'Anton',Impact,sans-serif;letter-spacing:.1em;background:var(--blood);color:#fff}
+.ticker-track{display:inline-flex;gap:60px;white-space:nowrap;padding-left:190px;
+  animation:scroll 40s linear infinite;font-family:'Bebas Neue',sans-serif;font-size:23px;letter-spacing:.06em}
+.ticker-track .ti b{color:var(--gold)}
+.ticker-track .ti .amt{color:var(--neon-green)}
+.ticker-track .ti .nm{color:var(--muted)}
+
+#foot{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;
+  padding:6px 24px;border-top:1px solid rgba(255,255,255,.08)}
+.foot-hint{font-family:'Bebas Neue';letter-spacing:.25em;font-size:14px;color:var(--muted)}
+.status-pill{font-family:'Bebas Neue';letter-spacing:.1em;font-size:14px;color:var(--muted);
+  background:rgba(0,0,0,.5);padding:3px 12px;border-radius:20px;border:1px solid var(--steel)}
+.status-pill.ok{color:var(--neon-green);border-color:rgba(57,255,20,.4)}
+.status-pill.err{color:var(--blood-2);border-color:rgba(255,43,28,.5)}
+
+/* ============================================================
+   THE GRID — agents × days matrix
+   ============================================================ */
+.grid{flex:1;display:grid;gap:6px;min-height:0;grid-auto-rows:1fr;
+  /* column template set inline by JS: name + 7 days + total + avg */}
+
+.gcell{display:flex;flex-direction:column;justify-content:center;align-items:center;border-radius:10px;
+  background:linear-gradient(180deg,rgba(25,25,36,.85),rgba(15,15,22,.85));
+  border:1px solid rgba(255,255,255,.06);overflow:hidden;min-height:0}
+
+/* header row */
+.ghead{background:linear-gradient(180deg,rgba(60,45,10,.6),rgba(20,16,4,.7));border-color:rgba(255,210,63,.35)}
+.ghead .d-name{font-family:'Anton',Impact,sans-serif;font-size:clamp(16px,1.6vw,28px);letter-spacing:.06em;color:var(--gold)}
+.ghead .d-date{font-family:'Bebas Neue';font-size:clamp(12px,1vw,18px);letter-spacing:.2em;color:var(--muted)}
+.ghead.today{background:linear-gradient(180deg,rgba(225,6,0,.5),rgba(60,5,0,.6));border-color:var(--blood-2);
+  box-shadow:0 0 18px rgba(225,6,0,.35)}
+.ghead.today .d-name{color:#fff}
+.ghead.today .d-date{color:#ffc9c4}
+.ghead.metric{background:linear-gradient(180deg,rgba(0,80,110,.45),rgba(0,20,30,.6));border-color:rgba(0,229,255,.35)}
+.ghead.metric .d-name{color:var(--neon)}
+
+/* agent name cell */
+.gname{flex-direction:row;justify-content:flex-start;gap:10px;padding:0 12px;
+  background:linear-gradient(90deg,rgba(25,25,36,.95),rgba(17,17,25,.8))}
+.gname .avatar{width:clamp(28px,2.6vw,44px);height:clamp(28px,2.6vw,44px);border-radius:50%;display:grid;place-items:center;
+  font-family:'Anton',sans-serif;font-size:clamp(11px,1vw,17px);color:#fff;border:2px solid rgba(255,255,255,.25);flex-shrink:0}
+.gname .nm{min-width:0}
+.gname .nm b{display:block;font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:clamp(16px,1.7vw,30px);
+  text-transform:uppercase;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gname .nm i{display:block;font-style:normal;font-family:'Bebas Neue';font-size:clamp(11px,1vw,17px);
+  letter-spacing:.18em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grow-1 .gname{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.grow-1 .gname .nm b{color:var(--gold)}
+/* weekly bonus badge, pinned to the right of the fighter cell */
+.gname .bonus{margin-left:auto;text-align:right;flex-shrink:0}
+.gname .bonus b{display:block;font-family:'Anton',Impact,sans-serif;font-weight:400;
+  font-size:clamp(15px,1.55vw,28px);color:var(--neon-green);line-height:1;
+  text-shadow:0 0 14px rgba(57,255,20,.45);font-variant-numeric:tabular-nums}
+.gname .bonus span{display:block;font-family:'Bebas Neue';font-size:clamp(9px,.8vw,13px);
+  letter-spacing:.24em;color:var(--muted);margin-top:2px}
+
+/* day cells */
+.gday .amt{font-family:'Anton',Impact,sans-serif;font-size:clamp(18px,2vw,36px);color:#fff;line-height:1;
+  font-variant-numeric:tabular-nums}
+.gday .ct{font-family:'Bebas Neue';font-size:clamp(12px,1.05vw,18px);letter-spacing:.14em;color:var(--muted);margin-top:3px}
+.gday .ct b{color:var(--neon-green);font-weight:700}
+.gday.zero .amt{color:rgba(255,255,255,.16);font-size:clamp(14px,1.3vw,24px)}
+.gday.today-col{background:linear-gradient(180deg,rgba(225,6,0,.22),rgba(40,4,0,.35));border-color:rgba(255,43,28,.35)}
+
+/* daily bonus tiers: $800+ gold · $1400+ blue · $2200+ green */
+.gday.t1{box-shadow:inset 0 0 0 2px rgba(255,210,63,.65);background:linear-gradient(180deg,rgba(60,45,10,.55),rgba(25,19,4,.65))}
+.gday.t1 .amt{color:var(--gold)}
+.gday.t2{box-shadow:inset 0 0 0 2px rgba(0,162,255,.7);background:linear-gradient(180deg,rgba(0,55,110,.5),rgba(0,15,35,.65))}
+.gday.t2 .amt{color:#4dc3ff;text-shadow:0 0 14px rgba(0,162,255,.45)}
+.gday.t3{box-shadow:inset 0 0 0 2px rgba(57,255,20,.7);background:linear-gradient(180deg,rgba(20,80,10,.55),rgba(5,25,2,.65))}
+.gday.t3 .amt{color:var(--neon-green);text-shadow:0 0 14px rgba(57,255,20,.45)}
+
+/* weekly total / avg cells */
+.gtotal{background:linear-gradient(180deg,rgba(0,60,80,.35),rgba(0,15,22,.55));border-color:rgba(0,229,255,.25)}
+.gtotal .amt{font-family:'Anton',Impact,sans-serif;font-size:clamp(20px,2.2vw,40px);color:var(--neon);line-height:1;
+  font-variant-numeric:tabular-nums;text-shadow:0 0 14px rgba(0,229,255,.35)}
+.gtotal .ct{font-family:'Bebas Neue';font-size:clamp(12px,1.05vw,18px);letter-spacing:.14em;color:var(--muted);margin-top:3px}
+.gavg .amt{color:var(--gold);text-shadow:0 0 14px rgba(255,210,63,.3)}
+.grow-1 .gtotal .amt{color:var(--gold);text-shadow:0 0 16px rgba(255,210,63,.5)}
+
+/* champion row */
+.grow-1 .gcell{border-color:rgba(255,210,63,.4)}
+
+/* team totals row */
+.gteam{background:linear-gradient(180deg,rgba(225,6,0,.28),rgba(50,5,0,.5));border-color:rgba(255,43,28,.4)}
+.gteam .amt{color:#fff}
+.gteam.gname .nm b{color:var(--blood-2)}
+.gteam .ct b{color:#ffd23f}
+
+/* belt on champ */
+.champ-belt{font-size:clamp(14px,1.3vw,22px);filter:drop-shadow(0 0 8px var(--gold));animation:swing 2.5s ease-in-out infinite;flex-shrink:0}
+
+/* ============================================================
+   MEME TAKEOVER (10s)
+   ============================================================ */
+.meme-layer{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+  background:rgba(3,3,8,.82);backdrop-filter:blur(6px)}
+.meme-card{text-align:center;padding:26px 44px;border-radius:22px;max-width:min(86vw,1100px);
+  background:linear-gradient(160deg,var(--carbon-2),var(--carbon));border:3px solid var(--gold);
+  box-shadow:0 0 0 6px rgba(0,0,0,.5),0 30px 90px rgba(0,0,0,.8),0 0 80px rgba(255,210,63,.25);
+  animation:slam .5s cubic-bezier(.2,1.5,.3,1) both;transform:rotate(-2deg)}
+.meme-card .kick{font-family:'Bebas Neue';letter-spacing:.35em;color:var(--blood-2);font-size:clamp(18px,2.4vw,32px)}
+.meme-card .media{display:block;margin:14px auto 10px;max-width:min(70vw,760px);max-height:44vh;
+  border-radius:14px;border:3px solid rgba(255,255,255,.25);box-shadow:0 12px 40px rgba(0,0,0,.6);
+  object-fit:contain;background:#000}
+.meme-card .emoji{font-size:clamp(64px,10vw,130px);margin:10px 0}
+.meme-card .who{font-family:'Anton',Impact,sans-serif;font-size:clamp(36px,5.4vw,80px);text-transform:uppercase;line-height:.95;
+  background:linear-gradient(180deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.meme-card .amt{font-family:'Anton',Impact,sans-serif;font-size:clamp(34px,5.6vw,76px);color:var(--neon-green);
+  text-shadow:0 0 28px rgba(57,255,20,.5);line-height:1.05}
+.meme-card .line{font-family:'Bebas Neue';letter-spacing:.15em;color:var(--gold);font-size:clamp(18px,2.6vw,34px);margin-top:8px}
+.meme-card.bonus-card{border-color:var(--neon-green);
+  box-shadow:0 0 0 6px rgba(0,0,0,.5),0 30px 90px rgba(0,0,0,.8),0 0 90px rgba(57,255,20,.3)}
+.meme-card.bonus-card .kick{color:var(--neon-green)}
+.meme-card .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.12);margin-top:16px;overflow:hidden}
+.meme-card .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blood),var(--gold-2));
+  animation:drain 10s linear forwards;transform-origin:left}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-12px) rotate(4deg)}}
+@keyframes punch{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-6px) rotate(-8deg)}75%{transform:translateX(6px) rotate(8deg)}}
+@keyframes sweep{to{transform:rotate(360deg)}}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(255,43,28,.7)}70%{box-shadow:0 0 0 14px rgba(255,43,28,0)}100%{box-shadow:0 0 0 0 rgba(255,43,28,0)}}
+@keyframes swing{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
+@keyframes slam{0%{transform:rotate(-2deg) scale(2.2);opacity:0}60%{opacity:1}100%{transform:rotate(-2deg) scale(1)}}
+@keyframes drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes cellPop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.gday.pop{animation:cellPop .7s ease}

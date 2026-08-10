@@ -1,0 +1,53 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>THE WAR ROOM — Weekly Fight Stats</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css?v=6" />
+
+<!-- ============ SPLASH / AUDIO UNLOCK ============ -->
+<div id="splash">
+  <div class="splash-inner">
+    <div class="splash-icon">📋</div>
+    <h1 class="splash-title">THE&nbsp;WAR&nbsp;ROOM</h1>
+    <div class="splash-sub">WEEKLY FIGHT STATS · LIVE</div>
+    <button id="enterBtn">🥊 STEP INSIDE</button>
+    <div class="splash-hint">Click to start · enables sound &amp; fullscreen (F)</div>
+  </div>
+</div>
+
+<!-- ============ MAIN ============ -->
+<div id="app" class="hidden">
+  <canvas id="bgFx"></canvas>
+  <div id="emojiFx"></div>
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-glove">🥊</span>
+      <span class="brand-name">THE WAR ROOM</span>
+      <span class="brand-tag" id="weekTag">WEEK OF —</span>
+    </div>
+    <div class="live">
+      <span class="live-dot"></span> LIVE
+      <span id="clock" class="clock"></span>
+    </div>
+  </header>
+
+  <main id="stage">
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <footer id="ticker">
+    <div id="tickerTrack" class="ticker-track"></div>
+  </footer>
+
+  <footer id="foot">
+    <div class="foot-hint">S = TEST DEAL · B = TEST BONUS · M = MUTE · F = FULLSCREEN</div>
+    <div id="statusPill" class="status-pill">connecting…</div>
+  </footer>
+
+  <!-- 10-second meme takeover -->
+  <div id="memeLayer" class="meme-layer hidden"></div>
+</div>
+
+<script src="app.js?v=7"></script>
