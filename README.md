@@ -60,6 +60,11 @@ plus WEEK TOTAL and WEEK AVG columns and a TEAM totals row. Today's column glows
 red, each agent's best day is boxed in gold, this week's leader wears the belt.
 No rotation — everything fits one TV screen (Chromecast-friendly).
 
+**Time machine** — view any past week: add `?week=8/3` to the URL (also accepts
+`8/3/2026` or `2026-08-03`), or press `←` / `→` to step between weeks and `Home`
+(or `Esc`) to jump back to live. A purple banner marks past-week views, and bonus
+celebrations are suppressed while browsing history so old numbers never re-fire.
+
 When a new deal lands in the sheet it takes over the screen for **10 seconds**:
 same meme pack as the champions board (shared `memes/` folder), the agent's name,
 and the deal size, with a countdown bar — then back to the grid. Keys: S test deal,
