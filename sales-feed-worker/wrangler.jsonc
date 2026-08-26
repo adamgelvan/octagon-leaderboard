@@ -5,7 +5,10 @@
   "observability": { "enabled": true },
   "kv_namespaces": [
     { "binding": "PULSE_KV", "id": "46f6489b8bf54c6aaeb6f6ec40f8e1c8" }
-  ]
+  ],
+  "triggers": {
+    "crons": ["* * * * *"]  // refresh the KV sales copy from HighLevel every minute
+  }
   // Secrets (set once, never in this file):
   //   npx wrangler secret put GHL_TOKEN
   //   npx wrangler secret put GHL_LOCATION_ID
