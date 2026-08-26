@@ -137,10 +137,11 @@ function easternMDY(iso) {
 }
 
 function toCSV(rows) {
-  const esc = (s) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
-  const lines = ["Created Date,Agent,Monthly Premium"];
+  // Every field quoted, gviz-style — the War Room's parser only reads quoted cells.
+  const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
+  const lines = [`${q("Created Date")},${q("Agent")},${q("Monthly Premium")}`];
   for (const r of rows) {
-    lines.push(`${r.date},${esc(r.agent)},$${r.premium.toFixed(2)}`);
+    lines.push(`${q(r.date)},${q(r.agent)},${q("$" + r.premium.toFixed(2))}`);
   }
   return lines.join("\n") + "\n";
 }

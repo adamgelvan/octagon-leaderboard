@@ -17,6 +17,21 @@ const CONFIG = {
 const SHEET_URL = () =>
   `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CONFIG.GID}&_=${Date.now()}`;
 
+/* Primary data source: HighLevel via the ccg-sales-feed Cloudflare Worker.
+   Same CSV shape as the sheet; the sheet stays as an automatic fallback. */
+const FEED_URL = () =>
+  `https://ccg-sales-feed.adamgelvaninsurance.workers.dev/?_=${Date.now()}`;
+
+async function fetchBoardCSV(){
+  try {
+    const r = await fetch(FEED_URL(), { cache:"no-store" });
+    if (r.ok) return await r.text();
+  } catch (e) { /* feed down — fall through to the sheet */ }
+  const r2 = await fetch(SHEET_URL(), { cache:"no-store" });
+  if (!r2.ok) throw new Error("HTTP "+r2.status);
+  return await r2.text();
+}
+
 /* ------------------------------------------------------------
    Little DOM helpers
    ------------------------------------------------------------ */
@@ -78,9 +93,7 @@ function parseCSV(text){
 }
 
 async function fetchSales(){
-  const res = await fetch(SHEET_URL(), { cache:"no-store" });
-  if (!res.ok) throw new Error("HTTP "+res.status);
-  const rows = parseCSV(await res.text());
+  const rows = parseCSV(await fetchBoardCSV());
   const out=[];
   for (let i=1;i<rows.length;i++){                 // skip header
     const [date, agent, premium] = rows[i];

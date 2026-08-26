@@ -201,11 +201,24 @@ function parseMDY(s){
 function parseCSV(text){
   return text.trim().split(/\r?\n/).map(line=>[...line.matchAll(/"([^"]*)"/g)].map(x=>x[1]));
 }
-async function fetchSales(){
+/* Primary source: HighLevel via the ccg-sales-feed Cloudflare Worker (same
+   quoted-CSV shape as the sheet). The sheet stays as an automatic fallback. */
+const FEED_URL = () =>
+  `https://ccg-sales-feed.adamgelvaninsurance.workers.dev/?_=${Date.now()}`;
+
+async function fetchBoardCSV(){
+  try {
+    const r = await fetch(FEED_URL(), {cache:"no-store"});
+    if (r.ok) return await r.text();
+  } catch (e) { /* feed down — fall through to the sheet */ }
   const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CONFIG.GID}&t=${Date.now()}`;
   const res = await fetch(url, {cache:"no-store"});
   if (!res.ok) throw new Error("HTTP "+res.status);
-  const rows = parseCSV(await res.text());
+  return await res.text();
+}
+
+async function fetchSales(){
+  const rows = parseCSV(await fetchBoardCSV());
   return rows.slice(1)
     .filter(r=>r[0] && r[1] && r[2])
     .map(r=>({ date:r[0].trim(), agent:r[1].trim(), premium:parseFloat(r[2].replace(/[$,]/g,"")) }))
