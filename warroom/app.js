@@ -206,11 +206,13 @@ function parseCSV(text){
 const FEED_URL = () =>
   `https://ccg-sales-feed.adamgelvaninsurance.workers.dev/?_=${Date.now()}`;
 
+let dataSource="—";  // shown in the status pill so screens are self-explaining
 async function fetchBoardCSV(){
   try {
     const r = await fetch(FEED_URL(), {cache:"no-store"});
-    if (r.ok) return await r.text();
+    if (r.ok){ dataSource="HighLevel"; return await r.text(); }
   } catch (e) { /* feed down — fall through to the sheet */ }
+  dataSource="Sheet (fallback)";
   const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${CONFIG.GID}&t=${Date.now()}`;
   const res = await fetch(url, {cache:"no-store"});
   if (!res.ok) throw new Error("HTTP "+res.status);
@@ -467,7 +469,7 @@ async function poll(){
     }
     tiers = timeMachine ? null : newTiers;   // rebuild baseline on return to live
     const pill=$("#statusPill");
-    pill.textContent=`● live · ${sales.length} deals on the books · ${new Date().toLocaleTimeString()}`;
+    pill.textContent=`● live · ${sales.length} deals on the books · via ${dataSource} · ${new Date().toLocaleTimeString()}`;
     pill.className="status-pill ok";
   }catch(e){
     const pill=$("#statusPill");

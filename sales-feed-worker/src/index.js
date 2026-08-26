@@ -73,31 +73,33 @@ export default {
 
     if (request.method !== "GET") return new Response("method not allowed", { status: 405 });
 
+    // Serve strategy: warm isolate memory first; otherwise the shared
+    // last-good copy in KV (instantly), refreshing from HighLevel in the
+    // background. A HighLevel hiccup (rate limit, 5xx) never surfaces to the
+    // boards — they'd otherwise fall back to the stale Google Sheet and
+    // different TVs would show different numbers.
+    const csvHeaders = (cache) => ({
+      ...CORS,
+      "Content-Type": "text/csv; charset=utf-8",
+      "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
+      "x-feed-cache": cache,
+    });
+
     if (MEM.csv && Date.now() - MEM.at < CACHE_SECONDS * 1000) {
-      return new Response(MEM.csv, {
-        headers: {
-          ...CORS,
-          "Content-Type": "text/csv; charset=utf-8",
-          "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
-          "x-feed-rows": String(MEM.rows),
-          "x-feed-cache": "hit",
-        },
-      });
+      return new Response(MEM.csv, { headers: csvHeaders("hit") });
+    }
+
+    const kvCsv = await env.PULSE_KV.get("salescsv");
+    if (kvCsv) {
+      // serve the shared copy now, refresh behind the scenes
+      MEM = { at: MEM.at, csv: kvCsv, rows: MEM.rows };
+      ctx.waitUntil(refreshSales(env));
+      return new Response(kvCsv, { headers: csvHeaders("kv") });
     }
 
     try {
-      const rows = await pullSales(env);
-      const csv = toCSV(rows);
-      MEM = { at: Date.now(), csv, rows: rows.length };
-      return new Response(csv, {
-        headers: {
-          ...CORS,
-          "Content-Type": "text/csv; charset=utf-8",
-          "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
-          "x-feed-rows": String(rows.length),
-          "x-feed-cache": "miss",
-        },
-      });
+      const csv = await refreshSales(env);
+      return new Response(csv, { headers: csvHeaders("miss") });
     } catch (err) {
       return new Response("feed error: " + (err && err.message), {
         status: 502,
@@ -106,6 +108,21 @@ export default {
     }
   },
 };
+
+/** Pull from HighLevel and update memory + the shared KV copy (only writing
+ *  KV when the data actually changed). Throws on failure — callers that have
+ *  a last-good copy just keep serving it. */
+async function refreshSales(env) {
+  const rows = await pullSales(env);
+  const csv = toCSV(rows);
+  const prev = MEM.csv;
+  MEM = { at: Date.now(), csv, rows: rows.length };
+  if (csv !== prev) {
+    const stored = await env.PULSE_KV.get("salescsv");
+    if (csv !== stored) await env.PULSE_KV.put("salescsv", csv);
+  }
+  return csv;
+}
 
 async function pullSales(env) {
   const since = new Date(Date.now() - WINDOW_DAYS * 86400e3).toISOString();

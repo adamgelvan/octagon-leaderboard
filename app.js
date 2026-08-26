@@ -22,11 +22,13 @@ const SHEET_URL = () =>
 const FEED_URL = () =>
   `https://ccg-sales-feed.adamgelvaninsurance.workers.dev/?_=${Date.now()}`;
 
+let dataSource="—";  // surfaced in the status pill
 async function fetchBoardCSV(){
   try {
     const r = await fetch(FEED_URL(), { cache:"no-store" });
-    if (r.ok) return await r.text();
+    if (r.ok){ dataSource="HighLevel"; return await r.text(); }
   } catch (e) { /* feed down — fall through to the sheet */ }
+  dataSource="Sheet (fallback)";
   const r2 = await fetch(SHEET_URL(), { cache:"no-store" });
   if (!r2.ok) throw new Error("HTTP "+r2.status);
   return await r2.text();
