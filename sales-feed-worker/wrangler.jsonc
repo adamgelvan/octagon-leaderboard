@@ -2,8 +2,12 @@
   "name": "ccg-sales-feed",
   "main": "src/index.js",
   "compatibility_date": "2026-08-01",
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    { "binding": "PULSE_KV", "id": "46f6489b8bf54c6aaeb6f6ec40f8e1c8" }
+  ]
   // Secrets (set once, never in this file):
   //   npx wrangler secret put GHL_TOKEN
   //   npx wrangler secret put GHL_LOCATION_ID
+  //   npx wrangler secret put PULSE_PUSH_KEY   (shared with the call pipeline's .env)
 }

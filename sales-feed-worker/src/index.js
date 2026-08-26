@@ -43,6 +43,34 @@ let MEM = { at: 0, csv: null, rows: 0 };
 export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
+
+    // ---- /pulse: call-analytics dashboard data relay ------------------
+    // The call pipeline POSTs its data.json here every cycle (bypassing the
+    // ~5-min Google publish-to-web cache); the CCG HQ hub GETs it live.
+    const url = new URL(request.url);
+    if (url.pathname === "/pulse") {
+      if (request.method === "POST") {
+        if (request.headers.get("x-push-key") !== env.PULSE_PUSH_KEY)
+          return new Response("forbidden", { status: 403 });
+        const body = await request.text();
+        try { JSON.parse(body); } catch { return new Response("bad json", { status: 400 }); }
+        await env.PULSE_KV.put("data", body);
+        return new Response("ok", { headers: CORS });
+      }
+      if (request.method === "GET") {
+        const data = await env.PULSE_KV.get("data");
+        if (!data) return new Response("no data yet", { status: 404, headers: CORS });
+        return new Response(data, {
+          headers: {
+            ...CORS,
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
+        });
+      }
+      return new Response("method not allowed", { status: 405 });
+    }
+
     if (request.method !== "GET") return new Response("method not allowed", { status: 405 });
 
     if (MEM.csv && Date.now() - MEM.at < CACHE_SECONDS * 1000) {
