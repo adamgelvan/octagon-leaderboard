@@ -418,7 +418,10 @@ function pumpMemes(){
 let seen=null;   // Map key -> count
 let tiers=null;  // Map "agent|dayIdx" -> tier level, for bonus-crossing detection
 let lastLatestTs=Date.now();  // newest deal date seen, anchors the "live" week
+let lastGoodPoll=0;           // for gap detection — see poll()
 const keyOf=(s)=>`${s.date}|${s.agent}|${s.premium}`;
+const GAP_MS=Math.max(CONFIG.POLL_MS*4, 120000);  // no successful poll for this long = dead time
+const MAX_LIVE_BURST=3;       // >3 "new" deals in one poll = catch-up backlog, not live sales
 async function poll(){
   try{
     const sales = await fetchSales();
@@ -429,16 +432,26 @@ async function poll(){
     updateTicker(sales.filter(s=>parseMDY(s.date)===latestTs).reverse(), w);  // newest first
     const counts=new Map();
     for (const s of sales) counts.set(keyOf(s), (counts.get(keyOf(s))||0)+1);
-    if (seen){
+    // Only celebrate LIVE sales: after dead time (sleep, throttled tab, feed
+    // outage) the diff would replay every sale from the gap — rebase silently
+    // instead. A 4+ deal burst in one 15s poll is a backlog too, never live.
+    const now=Date.now();
+    const wasGap = !lastGoodPoll || (now-lastGoodPoll) > GAP_MS;
+    lastGoodPoll = now;
+    if (seen && !wasGap){
+      const pending=[];
       for (const s of sales){
         const k=keyOf(s);
         const extra=(counts.get(k)||0)-(seen.get(k)||0);
         if (extra>0){
-          for (let i=0;i<extra;i++){
-            queueMeme(s.agent, s.premium);
-            if (s.premium>BIG_DEAL_MIN) queueBonus(s.agent, BIG_DEAL_BONUS, "BIG DEAL BONUS");  // deal over $500
-          }
+          for (let i=0;i<extra;i++) pending.push(s);
           seen.set(k, counts.get(k));    // don't double-fire on repeated iteration
+        }
+      }
+      if (pending.length<=MAX_LIVE_BURST){
+        for (const s of pending){
+          queueMeme(s.agent, s.premium);
+          if (s.premium>BIG_DEAL_MIN) queueBonus(s.agent, BIG_DEAL_BONUS, "BIG DEAL BONUS");  // deal over $500
         }
       }
     }
@@ -446,7 +459,7 @@ async function poll(){
     // daily tier crossings ($800/$1400/$2200) → bonus animation
     const newTiers=new Map();
     for (const a of w.agents) a.perDay.forEach((d,i)=>newTiers.set(a.agent+"|"+i, tierLevel(d.sum)));
-    if (tiers && !timeMachine){          // never celebrate a past week's numbers
+    if (tiers && !timeMachine && !wasGap){   // never celebrate a past week's numbers, nor a catch-up gap
       for (const [k,lvl] of newTiers){
         if (lvl > (tiers.get(k)||0))
           queueBonus(k.split("|")[0], tierBonus(lvl), "DAILY BONUS UNLOCKED");
