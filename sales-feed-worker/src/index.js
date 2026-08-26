@@ -36,25 +36,32 @@ const CORS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
+// Isolate-level cache — the Cache API is a no-op on *.workers.dev, so a
+// warm isolate answers the TVs' 15s polls from memory between GHL sweeps.
+let MEM = { at: 0, csv: null, rows: 0 };
+
 export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
     if (request.method !== "GET") return new Response("method not allowed", { status: 405 });
 
-    // One canonical cache key regardless of query-string cache-busters (&_=...)
-    const cacheKey = new Request(new URL("/", request.url).toString());
-    const cache = caches.default;
-    const hit = await cache.match(cacheKey);
-    if (hit) {
-      const res = new Response(hit.body, hit);
-      res.headers.set("x-feed-cache", "hit");
-      return res;
+    if (MEM.csv && Date.now() - MEM.at < CACHE_SECONDS * 1000) {
+      return new Response(MEM.csv, {
+        headers: {
+          ...CORS,
+          "Content-Type": "text/csv; charset=utf-8",
+          "Cache-Control": `public, max-age=${CACHE_SECONDS}`,
+          "x-feed-rows": String(MEM.rows),
+          "x-feed-cache": "hit",
+        },
+      });
     }
 
     try {
       const rows = await pullSales(env);
       const csv = toCSV(rows);
-      const res = new Response(csv, {
+      MEM = { at: Date.now(), csv, rows: rows.length };
+      return new Response(csv, {
         headers: {
           ...CORS,
           "Content-Type": "text/csv; charset=utf-8",
@@ -63,8 +70,6 @@ export default {
           "x-feed-cache": "miss",
         },
       });
-      ctx.waitUntil(cache.put(cacheKey, res.clone()));
-      return res;
     } catch (err) {
       return new Response("feed error: " + (err && err.message), {
         status: 502,
