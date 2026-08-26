@@ -47,6 +47,7 @@ const AGENT_NICKNAMES = {
   "Matt Langer":                  "MITYA",
   "Yara Ferreira":                "HOUDINI",
   "Timur Rahimov":                "TIMMY TURNER",
+  "Elaine Grossman":              "EEELAINE",
 };
 const NICKNAMES = ["THE CLOSER","IRON","MONEY","THE MACHINE","THE HAMMER","EL FUEGO","THE SNIPER","MAD DOG","THE KING","DIAMOND","THE BEAST","SILK","THE PROBLEM","THUNDER"];
 function nickname(name){
