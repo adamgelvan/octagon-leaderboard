@@ -91,9 +91,12 @@ export default {
 
     const kvCsv = await env.PULSE_KV.get("salescsv");
     if (kvCsv) {
-      // serve the shared copy — the every-minute cron keeps it fresh, so
-      // viewer requests never sweep HighLevel themselves
+      // Serve the shared copy now, refresh in the background. (The cron also
+      // refreshes, but free-plan CPU limits can kill scheduled runs — the
+      // request path is the refresh that reliably fits, throttled to one
+      // background sweep per isolate per CACHE_SECONDS by the MEM stamp.)
       MEM = { at: Date.now(), csv: kvCsv, rows: MEM.rows };
+      ctx.waitUntil(refreshSales(env).catch(() => {}));
       return new Response(kvCsv, { headers: csvHeaders("kv") });
     }
 
