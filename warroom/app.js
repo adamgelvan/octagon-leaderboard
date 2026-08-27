@@ -223,6 +223,7 @@ async function fetchSales(){
   const rows = parseCSV(await fetchBoardCSV());
   return rows.slice(1)
     .filter(r=>r[0] && r[1] && r[2])
+    .filter(r=>!/customer\s*service/i.test(r[1]))   // never show service touches
     .map(r=>({ date:r[0].trim(), agent:r[1].trim(), premium:parseFloat(r[2].replace(/[$,]/g,"")) }))
     .filter(s=>s.agent && isFinite(s.premium) && s.premium>0 && parseMDY(s.date)>0);
 }

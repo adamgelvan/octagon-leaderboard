@@ -172,6 +172,7 @@ async function pullSales(env) {
       const agent = String(custom[F_AGENT] || "").trim();
       const premium = parseFloat(String(custom[F_PREMIUM] || "").replace(/[$,]/g, ""));
       if (!agent || !isFinite(premium) || premium <= 0) continue;
+      if (/customer\s*service/i.test(agent)) continue; // service touches aren't sales
       rows.push({ date: easternMDY(ct.dateAdded), agent, premium });
     }
     if (!contacts.length) break;

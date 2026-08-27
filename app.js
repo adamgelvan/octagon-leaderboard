@@ -100,6 +100,7 @@ async function fetchSales(){
   for (let i=1;i<rows.length;i++){                 // skip header
     const [date, agent, premium] = rows[i];
     if (!agent || !agent.trim()) continue;
+    if (/customer\s*service/i.test(agent)) continue;   // never show service touches
     const val = parseFloat(String(premium||"").replace(/[^0-9.]/g,""));
     if (!isFinite(val)) continue;
     out.push({ date:(date||"").trim(), agent:agent.trim(), premium:val });
