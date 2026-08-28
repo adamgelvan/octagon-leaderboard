@@ -271,7 +271,9 @@ function computeWeek(sales){
       if (s.premium>BIG_DEAL_MIN) a.bigDeals++;
     }
   }
-  const agents=[...map.values()].sort((x,y)=> y.weekTotal-x.weekTotal || y.weekCount-x.weekCount);
+  const agents=[...map.values()]
+    .filter(a=>a.weekCount>0)   // no $0 rows — inactive/departed agents never display
+    .sort((x,y)=> y.weekTotal-x.weekTotal || y.weekCount-x.weekCount);
   // weekly bonus: daily tier bonuses + $100 per big deal
   for (const a of agents)
     a.bonus = a.perDay.reduce((s,d)=>s+tierBonus(tierLevel(d.sum)),0) + a.bigDeals*BIG_DEAL_BONUS;

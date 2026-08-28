@@ -116,6 +116,15 @@ function parseMDY(s){
 
 /* Aggregate raw sales into ranked standings */
 function computeStandings(sales){
+  // Exclude departed/inactive agents entirely: anyone with no sale in the
+  // last 30 days (e.g. agents who left) neither displays nor counts.
+  {
+    const last = new Map();
+    for (const s of sales){ const t=parseMDY(s.date); if (t>(last.get(s.agent)||0)) last.set(s.agent,t); }
+    const newest = Math.max(0, ...last.values());
+    const cutoff = newest - 30*86400000;
+    sales = sales.filter(s => (last.get(s.agent)||0) >= cutoff);
+  }
   const latestDate = sales.reduce((a,s)=> parseMDY(s.date)>parseMDY(a)? s.date : a, "");
   const latestTs = parseMDY(latestDate);
   // Monday-start week containing the latest sale
