@@ -111,11 +111,6 @@ export default {
     }
   },
 
-  // Cron (every minute): keep the shared KV copy fresh so viewer requests
-  // never have to sweep HighLevel themselves — they only read KV.
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(refreshSales(env).catch(() => {})); // failure = keep last good
-  },
 };
 
 /** Pull from HighLevel and update memory + the shared KV copy (only writing

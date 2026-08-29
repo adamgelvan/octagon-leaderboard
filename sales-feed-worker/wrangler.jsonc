@@ -6,9 +6,11 @@
   "kv_namespaces": [
     { "binding": "PULSE_KV", "id": "46f6489b8bf54c6aaeb6f6ec40f8e1c8" }
   ],
-  "triggers": {
-    "crons": ["* * * * *"]  // refresh the KV sales copy from HighLevel every minute
-  }
+  "triggers": { "crons": [] }  // explicitly empty — clears the registered cron
+  // NOTE: an every-minute cron refresh was removed 2026-08-28 — scheduled runs
+  // exceed the FREE-plan CPU limit every time (Cloudflare emailed about 1,000+
+  // daily failures) while viewer requests refresh fine. If the account moves
+  // to Workers Paid, re-add:  "triggers": { "crons": ["* * * * *"] }
   // Secrets (set once, never in this file):
   //   npx wrangler secret put GHL_TOKEN
   //   npx wrangler secret put GHL_LOCATION_ID
