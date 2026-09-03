@@ -520,3 +520,17 @@ document.addEventListener("keydown",(e)=>{
     case "home": case "escape": setWeek(0); break;
   }
 });
+
+/* ---------- auto-reload on new build ----------
+   TVs run unattended; when a new build ships, reload within ~5 min so no
+   screen ever drifts onto old code. Baseline = this page's own HTML. */
+(async()=>{
+  const get=async()=>{try{
+    const u=location.href.split("#")[0]+(location.search?"&":"?")+"_build="+Date.now();
+    const r=await fetch(u,{cache:"no-store"}); return r.ok?await r.text():null;
+  }catch(e){return null}};
+  const base=await get();
+  if(base) setInterval(async()=>{
+    const t=await get(); if(t&&t!==base) location.reload();
+  },5*60*1000);
+})();
