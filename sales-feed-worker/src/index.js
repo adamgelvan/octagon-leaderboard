@@ -44,21 +44,22 @@ export default {
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
 
-    // ---- /pulse: call-analytics dashboard data relay ------------------
-    // The call pipeline POSTs its data.json here every cycle (bypassing the
-    // ~5-min Google publish-to-web cache); the CCG HQ hub GETs it live.
+    // ---- KV relays: /pulse (funnel data) and /dispo (disposition report) --
+    // The call pipeline POSTs JSON here every cycle; HQ pages GET it live.
     const url = new URL(request.url);
-    if (url.pathname === "/pulse") {
+    const RELAY_KEYS = { "/pulse": "data", "/dispo": "dispo" };
+    if (url.pathname in RELAY_KEYS) {
+      const kvKey = RELAY_KEYS[url.pathname];
       if (request.method === "POST") {
         if (request.headers.get("x-push-key") !== env.PULSE_PUSH_KEY)
           return new Response("forbidden", { status: 403 });
         const body = await request.text();
         try { JSON.parse(body); } catch { return new Response("bad json", { status: 400 }); }
-        await env.PULSE_KV.put("data", body);
+        await env.PULSE_KV.put(kvKey, body);
         return new Response("ok", { headers: CORS });
       }
       if (request.method === "GET") {
-        const data = await env.PULSE_KV.get("data");
+        const data = await env.PULSE_KV.get(kvKey);
         if (!data) return new Response("no data yet", { status: 404, headers: CORS });
         return new Response(data, {
           headers: {
