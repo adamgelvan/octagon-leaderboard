@@ -77,6 +77,7 @@ export default {
     }
 
     if (request.method !== "GET") return new Response("method not allowed", { status: 405 });
+    if (url.pathname !== "/") return new Response("not found", { status: 404, headers: CORS });
 
     // Serve strategy: warm isolate memory first; otherwise the shared
     // last-good copy in KV (instantly), refreshing from HighLevel in the
