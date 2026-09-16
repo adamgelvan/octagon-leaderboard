@@ -47,14 +47,22 @@ export default {
     // ---- KV relays: /pulse (funnel data) and /dispo (disposition report) --
     // The call pipeline POSTs JSON here every cycle; HQ pages GET it live.
     const url = new URL(request.url);
-    const RELAY_KEYS = { "/pulse": "data", "/dispo": "dispo" };
-    if (url.pathname in RELAY_KEYS) {
-      const kvKey = RELAY_KEYS[url.pathname];
+    // /tv + /tv.json: the PUBLIC CPA TV board. The CPA sync pushes tv.html
+    // and a TV-only payload (agent x day totals — no commissions, campaigns,
+    // or per-deal detail), so the office can open it without a login.
+    const RELAY = {
+      "/pulse":   { key: "data",   type: "application/json; charset=utf-8", json: true },
+      "/dispo":   { key: "dispo",  type: "application/json; charset=utf-8", json: true },
+      "/tv.json": { key: "tvdata", type: "application/json; charset=utf-8", json: true },
+      "/tv":      { key: "tvhtml", type: "text/html; charset=utf-8",        json: false },
+    };
+    if (url.pathname in RELAY) {
+      const { key: kvKey, type, json } = RELAY[url.pathname];
       if (request.method === "POST") {
         if (request.headers.get("x-push-key") !== env.PULSE_PUSH_KEY)
           return new Response("forbidden", { status: 403 });
         const body = await request.text();
-        try { JSON.parse(body); } catch { return new Response("bad json", { status: 400 }); }
+        if (json) { try { JSON.parse(body); } catch { return new Response("bad json", { status: 400 }); } }
         await env.PULSE_KV.put(kvKey, body);
         return new Response("ok", { headers: CORS });
       }
@@ -62,11 +70,7 @@ export default {
         const data = await env.PULSE_KV.get(kvKey);
         if (!data) return new Response("no data yet", { status: 404, headers: CORS });
         return new Response(data, {
-          headers: {
-            ...CORS,
-            "Content-Type": "application/json; charset=utf-8",
-            "Cache-Control": "no-store",
-          },
+          headers: { ...CORS, "Content-Type": type, "Cache-Control": "no-store" },
         });
       }
       return new Response("method not allowed", { status: 405 });
