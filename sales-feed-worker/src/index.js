@@ -53,6 +53,7 @@ export default {
     const RELAY = {
       "/pulse":   { key: "data",   type: "application/json; charset=utf-8", json: true },
       "/dispo":   { key: "dispo",  type: "application/json; charset=utf-8", json: true },
+      "/attendance": { key: "attendance", type: "application/json; charset=utf-8", json: true },
       "/tv.json": { key: "tvdata", type: "application/json; charset=utf-8", json: true },
       "/tv":      { key: "tvhtml", type: "text/html; charset=utf-8",        json: false },
     };
