@@ -10,14 +10,22 @@ const CONFIG = {
   MEME_MS: 10000,     // meme takeover duration per deal
 };
 
-/* ---------- bonus structure ----------
-   Daily premium tiers (highest reached wins, per agent per day):
-     $800 → $100 · $1400 → $200 · $2200 → $500
-   Plus every single deal over $500 = extra $100. */
-const BONUS_TIERS = [ {min:800,bonus:100}, {min:1400,bonus:200}, {min:2200,bonus:500} ];
+/* ---------- bonus structure (Adam, 2026-10-26) ----------
+   ONLY ACH deals count toward any bonus. Credit deals still show in the
+   premium totals, but never move an agent up a tier or earn a big-deal bonus.
+   Daily tiers STACK — each one crossed that day adds its bonus, on the agent's
+   ACH premium for the day:
+     $800 → +$100 · $1400 → +$100 · $2200 → +$100 · $3000 → +$300   (max $600/day)
+   Plus every single ACH deal over $500 = +$100. Week = Mon–Sun. */
+const BONUS_TIERS = [ {min:800,bonus:100}, {min:1400,bonus:100}, {min:2200,bonus:100}, {min:3000,bonus:300} ];
 const BIG_DEAL_MIN = 500, BIG_DEAL_BONUS = 100;
 function tierLevel(sum){ let l=0; BONUS_TIERS.forEach((t,i)=>{ if (sum>=t.min) l=i+1; }); return l; }
-function tierBonus(level){ return level? BONUS_TIERS[level-1].bonus : 0; }
+/* stacked: total paid for reaching `level` = every tier up to and including it */
+function tierBonus(level){ return BONUS_TIERS.slice(0, level).reduce((s,t)=>s+t.bonus, 0); }
+/* Bonus eligibility. The HighLevel feed sends Payment Method ("ACH"/"Credit").
+   The Google Sheet fallback has no such column (payment === null) — treated as
+   eligible so a feed outage doesn't wipe the board's bonuses. */
+const isAch = (s)=> s.payment===null || /\bach\b|bank|draft/i.test(s.payment);
 
 const $ = (s)=>document.querySelector(s);
 function el(tag, cls, html){ const d=document.createElement(tag); if(cls) d.className=cls; if(html!=null) d.innerHTML=html; return d; }
@@ -224,7 +232,8 @@ async function fetchSales(){
   return rows.slice(1)
     .filter(r=>r[0] && r[1] && r[2])
     .filter(r=>!/customer\s*service/i.test(r[1]))   // never show service touches
-    .map(r=>({ date:r[0].trim(), agent:r[1].trim(), premium:parseFloat(r[2].replace(/[$,]/g,"")) }))
+    .map(r=>({ date:r[0].trim(), agent:r[1].trim(), premium:parseFloat(r[2].replace(/[$,]/g,"")),
+               payment: r.length>3 ? (r[3]||"").trim() : null }))
     .filter(s=>s.agent && isFinite(s.premium) && s.premium>0 && parseMDY(s.date)>0);
 }
 
@@ -263,20 +272,23 @@ function computeWeek(sales){
   const map = new Map();
   for (const s of sales){
     if (!map.has(s.agent)) map.set(s.agent, { agent:s.agent,
-      perDay:Array.from({length:7},()=>({count:0,sum:0})), weekTotal:0, weekCount:0, bigDeals:0 });
+      perDay:Array.from({length:7},()=>({count:0,sum:0,achSum:0})), weekTotal:0, weekCount:0, bigDeals:0 });
     const a = map.get(s.agent);
     const di = dayIndex(s);
     if (di>=0){
       a.perDay[di].count++; a.perDay[di].sum+=s.premium; a.weekTotal+=s.premium; a.weekCount++;
-      if (s.premium>BIG_DEAL_MIN) a.bigDeals++;
+      if (isAch(s)){
+        a.perDay[di].achSum+=s.premium;
+        if (s.premium>BIG_DEAL_MIN) a.bigDeals++;
+      }
     }
   }
   const agents=[...map.values()]
     .filter(a=>a.weekCount>0)   // no $0 rows — inactive/departed agents never display
     .sort((x,y)=> y.weekTotal-x.weekTotal || y.weekCount-x.weekCount);
-  // weekly bonus: daily tier bonuses + $100 per big deal
+  // weekly bonus: stacked daily tier bonuses (on ACH premium) + $100 per ACH big deal
   for (const a of agents)
-    a.bonus = a.perDay.reduce((s,d)=>s+tierBonus(tierLevel(d.sum)),0) + a.bigDeals*BIG_DEAL_BONUS;
+    a.bonus = a.perDay.reduce((s,d)=>s+tierBonus(tierLevel(d.achSum)),0) + a.bigDeals*BIG_DEAL_BONUS;
   const team={ perDay:Array.from({length:7},()=>({count:0,sum:0})), weekTotal:0, weekCount:0 };
   for (const a of agents) a.perDay.forEach((d,i)=>{ team.perDay[i].count+=d.count; team.perDay[i].sum+=d.sum; });
   team.weekTotal = agents.reduce((s,a)=>s+a.weekTotal,0);
@@ -320,8 +332,8 @@ function render(w){
       const cls=["gcell","gday"];
       if (d.sum===0) cls.push("zero");
       if (i===w.todayIdx) cls.push("today-col");
-      const tl=tierLevel(d.sum);
-      if (tl) cls.push("t"+tl);   // t1 $800+ gold · t2 $1400+ blue · t3 $2200+ green
+      const tl=tierLevel(d.achSum);   // tier color follows the bonus, i.e. ACH premium
+      if (tl) cls.push("t"+tl);   // t1 $800+ gold · t2 $1400+ blue · t3 $2200+ green · t4 $3000+ purple
       grid.appendChild(wrapRow(el("div",cls.join(" "),
         d.sum===0? `<div class="amt">—</div>`
                  : `<div class="amt">${money(d.sum)}</div><div class="ct"><b>${d.count}</b> DEAL${d.count>1?"S":""}</div>`),rowCls));
@@ -456,18 +468,20 @@ async function poll(){
       if (pending.length<=MAX_LIVE_BURST){
         for (const s of pending){
           queueMeme(s.agent, s.premium);
-          if (s.premium>BIG_DEAL_MIN) queueBonus(s.agent, BIG_DEAL_BONUS, "BIG DEAL BONUS");  // deal over $500
+          if (s.premium>BIG_DEAL_MIN && isAch(s)) queueBonus(s.agent, BIG_DEAL_BONUS, "BIG DEAL BONUS");  // ACH deal over $500
         }
       }
     }
     seen=counts;
-    // daily tier crossings ($800/$1400/$2200) → bonus animation
+    // daily tier crossings ($800/$1400/$2200/$3000 of ACH premium) → bonus animation.
+    // Tiers stack, so the pop-up shows only what was just added.
     const newTiers=new Map();
-    for (const a of w.agents) a.perDay.forEach((d,i)=>newTiers.set(a.agent+"|"+i, tierLevel(d.sum)));
+    for (const a of w.agents) a.perDay.forEach((d,i)=>newTiers.set(a.agent+"|"+i, tierLevel(d.achSum)));
     if (tiers && !timeMachine && !wasGap){   // never celebrate a past week's numbers, nor a catch-up gap
       for (const [k,lvl] of newTiers){
-        if (lvl > (tiers.get(k)||0))
-          queueBonus(k.split("|")[0], tierBonus(lvl), "DAILY BONUS UNLOCKED");
+        const prev=tiers.get(k)||0;
+        if (lvl > prev)
+          queueBonus(k.split("|")[0], tierBonus(lvl)-tierBonus(prev), "DAILY BONUS UNLOCKED");
       }
     }
     tiers = timeMachine ? null : newTiers;   // rebuild baseline on return to live

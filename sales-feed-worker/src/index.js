@@ -26,6 +26,7 @@ const API_VERSION = "2021-07-28";
 // Custom-field IDs (from the commission-audit pull, verified 2026-08-26)
 const F_PREMIUM = "WOnvwmzith6jSX7wqKdX"; // Total Monthly Premium
 const F_AGENT = "XqT4BXOkmZd5b2wThJRm";   // Agent (name as text)
+const F_PAYMENT = "JC4e9vlzebRfxPQ63ct2"; // Payment Method ("ACH" / "Credit") — War Room bonuses are ACH-only
 
 const WINDOW_DAYS = 90;
 const CACHE_SECONDS = 60;
@@ -175,7 +176,8 @@ async function pullSales(env) {
       const premium = parseFloat(String(custom[F_PREMIUM] || "").replace(/[$,]/g, ""));
       if (!agent || !isFinite(premium) || premium <= 0) continue;
       if (/customer\s*service/i.test(agent)) continue; // service touches aren't sales
-      rows.push({ date: easternMDY(ct.dateAdded), agent, premium });
+      const payment = String(custom[F_PAYMENT] || "").trim();
+      rows.push({ date: easternMDY(ct.dateAdded), agent, premium, payment });
     }
     if (!contacts.length) break;
     searchAfter = contacts[contacts.length - 1].searchAfter || data.searchAfter;
@@ -201,9 +203,11 @@ function easternMDY(iso) {
 function toCSV(rows) {
   // Every field quoted, gviz-style — the War Room's parser only reads quoted cells.
   const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
-  const lines = [`${q("Created Date")},${q("Agent")},${q("Monthly Premium")}`];
+  // Payment Method is appended LAST so readers that take the first 3 columns
+  // (Octagon, older War Room builds) are unaffected.
+  const lines = [`${q("Created Date")},${q("Agent")},${q("Monthly Premium")},${q("Payment Method")}`];
   for (const r of rows) {
-    lines.push(`${q(r.date)},${q(r.agent)},${q("$" + r.premium.toFixed(2))}`);
+    lines.push(`${q(r.date)},${q(r.agent)},${q("$" + r.premium.toFixed(2))},${q(r.payment || "")}`);
   }
   return lines.join("\n") + "\n";
 }
